@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #fff; }
+        #sidebar { width: 200px; background: #f3f3f3; border-right: 1px solid #ccc; padding: 10px; display:flex; flex-direction:column;}
+        .nav-item { padding: 10px; cursor: pointer; border-radius: 4px; margin-bottom:5px;}
+        .nav-item:hover, .nav-item.active { background: #e5e5e5; }
+        #content { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        .file-list { display: flex; flex-direction: column; gap: 5px; }
+        .file-item { padding: 10px; border: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; border-radius: 4px; cursor: pointer;}
+        .file-item:hover { background: #f9f9f9; }
+        #drop-zone { position: absolute; top:0;left:0;right:0;bottom:0; background: rgba(0,120,212,0.1); border: 2px dashed #0078D4; display:none; justify-content:center; align-items:center; z-index:10; font-size: 20px;}
+        button { padding: 5px 10px; background: #0078D4; color:white; border:none; border-radius:4px; cursor:pointer;}
+        button:hover { background: #005a9e; }
+        .import-btn { margin-top: auto; }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <div class="nav-item active" id="nav-imported">Imported Files</div>
+        <div class="nav-item" id="nav-desktop">Desktop</div>
+        
+        <input type="file" id="file-input" style="display:none" multiple>
+        <button class="import-btn" onclick="document.getElementById('file-input').click()">Import File</button>
+    </div>
+    <div id="content">
+        <div id="drop-zone">Drop files here</div>
+        <h2 id="view-title">Imported Files</h2>
+        <div class="file-list" id="file-list"></div>
+    </div>
+
+    <script>
+        const VFS = window.parent.VFS;
+        const OS = window.parent;
+        let currentView = 'imported';
+
+        async function render() {
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+            
+            if(currentView === 'imported') {
+                const files = await VFS.getFiles();
+                files.forEach(f => {
+                    const div = document.createElement('div');
+                    div.className = 'file-item';
+                    div.innerHTML = `<span>📄 ${f.name}</span> <button onclick="OS.openFile({name:'${f.name}', content: \`${f.content.replace(/`/g, '\\`')}\`}); event.stopPropagation();">Open</button>`;
+                    div.onclick = () => OS.openFile(f);
+                    list.appendChild(div);
+                });
+            } else {
+                OS.appRegistry.forEach(app => {
+                    if(app.preinstalled || OS.installedApps.includes(app.id)) {
+                        const div = document.createElement('div');
+                        div.className = 'file-item';
+                        div.innerHTML = `<span>🖥️ ${app.name}.exe</span> <button onclick="OS.openWindow('${app.name}', '${app.path}'); event.stopPropagation();">Run</button>`;
+                        div.onclick = () => OS.openWindow(app.name, app.path);
+                        list.appendChild(div);
+                    }
+                });
+            }
+        }
+
+        document.getElementById('nav-imported').onclick = (e) => { currentView = 'imported'; document.getElementById('view-title').innerText = 'Imported Files'; document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); e.target.classList.add('active'); render(); };
+        document.getElementById('nav-desktop').onclick = (e) => { currentView = 'desktop'; document.getElementById('view-title').innerText = 'Desktop Apps'; document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active')); e.target.classList.add('active'); render(); };
+
+        // File Import / Drop
+        document.getElementById('file-input').onchange = (e) => handleFiles(e.target.files);
+        const content = document.getElementById('content');
+        const dropZone = document.getElementById('drop-zone');
+        content.ondragover = (e) => { e.preventDefault(); dropZone.style.display = 'flex'; };
+        dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.style.display = 'none'; };
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.style.display = 'none'; handleFiles(e.dataTransfer.files); };
+
+        function handleFiles(files) {
+            for(let file of files) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    await VFS.saveFile(file.name, file.type, e.target.result);
+                    if(currentView === 'imported') render();
+                };
+                if(file.name.endsWith('.png') || file.name.endsWith('.jpg')) reader.readAsDataURL(file);
+                else reader.readAsText(file);
+            }
+        }
+
+        window.parent.addEventListener('vfs-updated', render);
+        render();
+    </script>
+</body>
+</html>
