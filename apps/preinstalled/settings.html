@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #202020; color: white; padding: 30px; margin: 0; }
+        h1 { margin-top: 0; font-weight: normal; }
+        .theme-grid { display: flex; gap: 15px; margin-top: 20px; }
+        .color-box { width: 50px; height: 50px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: 0.2s;}
+        .color-box:hover { transform: scale(1.1); }
+    </style>
+</head>
+<body>
+    <h1>Personalization</h1>
+    <p style="color:#aaa;">Choose your system accent color.</p>
+    
+    <div class="theme-grid">
+        <!-- Windows Blue -->
+        <div class="color-box" style="background: #0078D4;" onclick="changeColor('#0078D4')"></div>
+        <!-- Purple -->
+        <div class="color-box" style="background: #8e44ad;" onclick="changeColor('#8e44ad')"></div>
+        <!-- Red -->
+        <div class="color-box" style="background: #e74c3c;" onclick="changeColor('#e74c3c')"></div>
+        <!-- Green -->
+        <div class="color-box" style="background: #27ae60;" onclick="changeColor('#27ae60')"></div>
+        <!-- Orange -->
+        <div class="color-box" style="background: #e67e22;" onclick="changeColor('#e67e22')"></div>
+    </div>
+
+    <script>
+        function changeColor(hex) {
+            // Uses secure postMessage API to tell OS to update theme
+            window.parent.postMessage({ action: 'changeTheme', color: hex }, '*');
+            window.parent.postMessage({ action: 'notify', title: 'Theme Updated', msg: 'System accent color changed.' }, '*');
+        }
+    </script>
+</body>
+</html>
